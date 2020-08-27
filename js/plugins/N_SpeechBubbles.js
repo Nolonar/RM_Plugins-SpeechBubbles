@@ -88,7 +88,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.2
+ * @help Version 1.0.3
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -220,6 +220,9 @@
             super.initialize(new Rectangle(0, 0, 0, 0));
 
             this.targetCharacter = targetCharacter;
+            if (!Window_Bubble.activeBubbles[this.targetId])
+                Window_Bubble.activeBubbles[this.targetId] = [];
+
             this.text = text;
             let textDimensions = this.textSizeEx(this.text);
             this.textLength = textDimensions.length;
@@ -250,12 +253,12 @@
                 "player";
         }
 
-        get activeBubble() {
+        get activeBubbles() {
             return Window_Bubble.activeBubbles[this.targetId];
         }
 
-        set activeBubble(speechBubble) {
-            Window_Bubble.activeBubbles[this.targetId] = speechBubble;
+        get activeBubble() {
+            return this.activeBubbles.slice(-1)[0];
         }
 
         flushTextState(textState) {
@@ -304,15 +307,21 @@
             this.update(); // Update window position before adding it to parent.
             parent.addChild(this);
             // Used to ensure only 1 speech bubble is visible per target.
-            this.activeBubble = this;
+            this.activeBubbles.remove(this);
+            if (this.activeBubble)
+                this.activeBubble.hide();
+            this.activeBubbles.push(this);
+            this.show();
         }
 
         remove() {
-            if (this.parent)
-                this.parent.removeChild(this);
+            if (!this.parent)
+                return;
 
-            if (this.activeBubble === this)
-                this.activeBubble = null;
+            this.parent.removeChild(this);
+            this.activeBubbles.remove(this);
+            if (this.activeBubble)
+                this.activeBubble.show();
         }
     }
 
