@@ -88,7 +88,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.0
+ * @help Version 1.0.1
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -158,7 +158,7 @@
     parameters.Distance = Number(parameters.Distance) || 2;
 
     let currentInterpreter = null;
-    PluginManager.registerCommand(PLUGIN_NAME, COMMAND_SHOW, args => {
+    PluginManager.registerCommand(PLUGIN_NAME, COMMAND_SHOW, function (args) {
         currentInterpreter = this;
 
         const text = args.text;
@@ -172,7 +172,7 @@
 
         showBubble(text, target, duration, isBlocking);
     });
-    PluginManager.registerCommand(PLUGIN_NAME, COMMAND_SCRIPT, args => {
+    PluginManager.registerCommand(PLUGIN_NAME, COMMAND_SCRIPT, function (args) {
         currentInterpreter = this;
         eval(args.script);
     });
