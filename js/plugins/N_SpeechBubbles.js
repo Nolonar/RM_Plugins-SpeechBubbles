@@ -88,7 +88,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.1
+ * @help Version 1.0.2
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -177,7 +177,7 @@
         eval(args.script);
     });
 
-    let isSpeechBubbleActive = false; // For blocking speech bubbles.
+    let blockingSpeechBubble = null;
     function showBubble(text, target, duration, isBlocking) {
         let scene = SceneManager._scene;
 
@@ -185,15 +185,12 @@
         speechBubble.addTo(scene);
 
         setTimeout(() => {
-            if (isBlocking)
-                isSpeechBubbleActive = false;
-
-            scene.removeChild(speechBubble);
+            speechBubble.remove();
         }, duration || speechBubble.textLength * 150);
 
         if (isBlocking) {
+            blockingSpeechBubble = speechBubble;
             currentInterpreter.setWaitMode(WAITMODE_BUBBLE);
-            isSpeechBubbleActive = true;
         }
     }
 
@@ -217,6 +214,8 @@
     // Window_Bubble
     //=========================================================================
     class Window_Bubble extends Window_Base {
+        static activeBubbles = {};
+
         initialize(targetCharacter, text) {
             super.initialize(new Rectangle(0, 0, 0, 0));
 
@@ -230,6 +229,33 @@
             this.move(0, 0, width, height);
             this.createContents();
             this.drawTextEx(this.text, 0, 0);
+        }
+
+        get characterSprite() {
+            return SceneManager._scene._spriteset._characterSprites
+                .find(sprite => sprite._character === this.targetCharacter);
+        }
+
+        get targetPosition() {
+            let sprite = this.characterSprite;
+            return {
+                x: sprite.x - this.width / 2,
+                y: sprite.y - sprite.height - this.height - 10
+            };
+        }
+
+        get targetId() {
+            return this.targetCharacter.eventId ?
+                this.targetCharacter.eventId() :
+                "player";
+        }
+
+        get activeBubble() {
+            return Window_Bubble.activeBubbles[this.targetId];
+        }
+
+        set activeBubble(speechBubble) {
+            Window_Bubble.activeBubbles[this.targetId] = speechBubble;
         }
 
         flushTextState(textState) {
@@ -250,36 +276,43 @@
             };
         }
 
-        getCharacterSprite() {
-            return SceneManager._scene._spriteset._characterSprites
-                .find(sprite => sprite._character === this.targetCharacter);
-        }
-
-        getTargetPosition() {
-            let sprite = this.getCharacterSprite();
-            return {
-                x: sprite.x - this.width / 2,
-                y: sprite.y - sprite.height - this.height - 10
-            };
-        }
-
         update() {
-            let windowPosition = this.getTargetPosition();
+            let windowPosition = this.targetPosition;
             this.x = windowPosition.x;
             this.y = windowPosition.y;
             super.update();
         }
 
-        shouldBeVisible() {
+        isPlayerWithinDistance() {
             let distance = parameters.Distance;
             let xDist = $gamePlayer._realX - this.targetCharacter.x;
             let yDist = $gamePlayer._realY - this.targetCharacter.y;
+            // Pythagoras: a^2 + b^2 = c^2
             return xDist * xDist + yDist * yDist <= distance * distance;
+        }
+
+        isActive() {
+            return !!this.parent;
+        }
+
+        isOtherBubbleActive() {
+            return this.activeBubble
+                && this.activeBubble !== this;
         }
 
         addTo(parent) {
             this.update(); // Update window position before adding it to parent.
             parent.addChild(this);
+            // Used to ensure only 1 speech bubble is visible per target.
+            this.activeBubble = this;
+        }
+
+        remove() {
+            if (this.parent)
+                this.parent.removeChild(this);
+
+            if (this.activeBubble === this)
+                this.activeBubble = null;
         }
     }
 
@@ -294,7 +327,7 @@
 
         let eventsWithBubbles = $gameMap.events()
             .filter(event => NOTETAG_BUBBLE in event.event().meta);
-        for (let event of eventsWithBubbles) {
+        for (const event of eventsWithBubbles) {
             let text = event.event().meta[NOTETAG_BUBBLE].replace(/\\n/g, "\n");
             speechBubbles.push(new Window_Bubble(event, text));
         }
@@ -304,9 +337,9 @@
     Scene_Map.prototype.terminate = function () {
         Scene_Map_terminate.call(this);
 
-        for (let bubble of speechBubbles) {
-            this.removeChild(bubble);
-        }
+        for (const bubble of speechBubbles)
+            bubble.remove();
+
         // Clear speechBubbles
         speechBubbles = [];
     }
@@ -319,13 +352,12 @@
         Game_Player_updateAnimation.call(this);
 
         let scene = SceneManager._scene;
-        for (let speechBubble of speechBubbles) {
-            if (speechBubble.shouldBeVisible()) {
-                if (!speechBubble.parent) {
+        for (const speechBubble of speechBubbles) {
+            if (speechBubble.isPlayerWithinDistance() && !speechBubble.isOtherBubbleActive()) {
+                if (!speechBubble.parent)
                     speechBubble.addTo(scene);
-                }
             } else {
-                scene.removeChild(speechBubble);
+                speechBubble.remove();
             }
         }
     }
@@ -335,9 +367,8 @@
     //=========================================================================
     let Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
     Game_Interpreter.prototype.updateWaitMode = function () {
-        if (this._waitMode === WAITMODE_BUBBLE) {
-            return isSpeechBubbleActive;
-        }
-        return Game_Interpreter_updateWaitMode();
+        return this._waitMode === WAITMODE_BUBBLE ?
+            blockingSpeechBubble.isActive() :
+            Game_Interpreter_updateWaitMode();
     };
 })();
