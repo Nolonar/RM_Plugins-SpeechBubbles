@@ -12,7 +12,7 @@ You can display speech bubbles using:
 
 | Project         | Latest release   |
 | --------------- | ---------------- |
-| N_SpeechBubbles | [1.0.0][release] |
+| N_SpeechBubbles | [1.0.1][release] |
 
 [All RPG Maker plugins by Nolonar][hub]
 
