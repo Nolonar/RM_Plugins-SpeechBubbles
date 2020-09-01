@@ -88,7 +88,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.3
+ * @help Version 1.0.4
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -378,6 +378,6 @@
     Game_Interpreter.prototype.updateWaitMode = function () {
         return this._waitMode === WAITMODE_BUBBLE ?
             blockingSpeechBubble.isActive() :
-            Game_Interpreter_updateWaitMode();
+            Game_Interpreter_updateWaitMode.call(this);
     };
 })();
