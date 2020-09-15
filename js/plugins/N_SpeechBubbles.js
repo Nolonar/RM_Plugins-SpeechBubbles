@@ -49,19 +49,22 @@
  * @desc Text to display in the speech bubble.
  * @type multiline_string
  * 
- * @arg target
+ * @arg targetSelector
  * @text Target
- * @desc Where the speech bubble will be displayed. Choose predefined options, or enter a number for the event ID.
- * @type combo
+ * @desc Where the speech bubble will be displayed.
+ * @type select
  * @option This event
  * @option Player
+ * @option Event
  * @option Event by variable
+ * @option Follower
+ * @option Follower by variable
  * @default This event
  * 
- * @arg targetVarId
+ * @arg targetSelectorId
  * @parent target
- * @text Target ID Variable
- * @desc If you chose "Event by variable" as target, select the Variable that contains the ID of the event to target.
+ * @text Target ID
+ * @desc If you chose "Event (by variable)" or "Follower (by variable)", select the ID by which to select the target.
  * @type variable
  * @default 1
  * 
@@ -89,7 +92,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.5
+ * @help Version 1.1.0
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -147,7 +150,10 @@
     const COMMAND_SHOW = "show";
     const COMMAND_ARG_TARGET_SELF = "This event";
     const COMMAND_ARG_TARGET_PLAYER = "Player";
-    const COMMAND_ARG_TARGET_BYVAR = "Event by variable";
+    const COMMAND_ARG_TARGET_EVENT = "Event";
+    const COMMAND_ARG_TARGET_EVENTBYVAR = "Event by variable";
+    const COMMAND_ARG_TARGET_FOLLOWER = "Follower";
+    const COMMAND_ARG_TARGET_FOLLOWERBYVAR = "Follower by variable";
 
     const COMMAND_SCRIPT = "script";
 
@@ -164,8 +170,11 @@
         const target = {
             [COMMAND_ARG_TARGET_SELF]: getCurrentEvent(),
             [COMMAND_ARG_TARGET_PLAYER]: getPlayer(),
-            [COMMAND_ARG_TARGET_BYVAR]: getEventByVar(args.targetVarId)
-        }[args.target] || getEventById(args.target);
+            [COMMAND_ARG_TARGET_EVENT]: getEventById(args.targetSelectorId),
+            [COMMAND_ARG_TARGET_EVENTBYVAR]: getEventByVar(args.targetSelectorId),
+            [COMMAND_ARG_TARGET_FOLLOWER]: getFollowerById(args.targetSelectorId),
+            [COMMAND_ARG_TARGET_FOLLOWERBYVAR]: getFollowerByVar(args.targetSelectorId)
+        }[args.targetSelector] || getEventById(args.targetSelector);
         const duration = Number(args.durationMs);
         const isBlocking = args.isBlocking.toLowerCase() === "true";
 
@@ -209,6 +218,14 @@
         return getEventById($gameVariables.value(v));
     }
 
+    function getFollowerById(id) {
+        return $gamePlayer.followers().follower(id);
+    }
+
+    function getFollowerByVar(v) {
+        return getFollowerById($gameVariables.value(v));
+    }
+
     //=========================================================================
     // Window_Bubble
     //=========================================================================
@@ -240,9 +257,11 @@
         }
 
         get targetId() {
-            return this.targetCharacter.eventId ?
-                this.targetCharacter.eventId() :
-                "player";
+            return {
+                [Game_Event.name]: () => `e${this.targetCharacter.eventId()}`,
+                [Game_Follower.name]: () => `f${this.targetCharacter._memberIndex}`,
+                [Game_Player.name]: () => `p`
+            }[this.targetCharacter.constructor.name]();
         }
 
         get activeBubbles() {
