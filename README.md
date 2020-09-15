@@ -10,9 +10,9 @@ You can display speech bubbles using:
   - Choose how long the bubble remains visible. By default, bubbles will automatically set their duration depending on the number of visible characters they display.
   - Choose whether the event should wait until the current speech bubble has disappeared, or whether it should just continue without waiting.
 
-| Project         | Latest release   |
-| --------------- | ---------------- |
-| N_SpeechBubbles | [1.0.4][release] |
+| Project         | Latest release      |
+| --------------- | ------------------- |
+| N_SpeechBubbles | [Download][release] |
 
 [All RPG Maker plugins by Nolonar][hub]
 
