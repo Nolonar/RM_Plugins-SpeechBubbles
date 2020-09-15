@@ -23,19 +23,20 @@
  */
 
 //=============================================================================
-// N_SpeechBubbles
+// Metadata
 //=============================================================================
 /*:
  * @target MZ
  * @plugindesc Displays text in speech bubbles above event.
  * @author Nolonar
- * @url https://github.com/Nolonar/RM_Plugins-SpeechBubbles
+ * @url https://github.com/Nolonar/RM_Plugins
  * 
  * @param Distance
  * @desc How far the player can be before the speech bubble is no longer visible.
  * @type number
  * @min 1
  * @max 10
+ * @decimals 3
  * @default 2
  * 
  * 
@@ -88,7 +89,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.0.4
+ * @help Version 1.0.5
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]   Replaced by the value of the nth variable.
@@ -111,8 +112,6 @@
  *      Similar to the "Script..." event command, but gives you access to the
  *      various N_SpeechBubbles functions. This allows you to have more control
  *      over speech bubbles than is currently supported by this plugin.
- * 
- *      Refer to the plugin
  * 
  * ============================================================================
  * Notetags
@@ -154,7 +153,7 @@
 
     const WAITMODE_BUBBLE = "bubble";
 
-    let parameters = PluginManager.parameters(PLUGIN_NAME);
+    const parameters = PluginManager.parameters(PLUGIN_NAME);
     parameters.Distance = Number(parameters.Distance) || 2;
 
     let currentInterpreter = null;
@@ -179,9 +178,9 @@
 
     let blockingSpeechBubble = null;
     function showBubble(text, target, duration, isBlocking) {
-        let scene = SceneManager._scene;
+        const scene = SceneManager._scene;
 
-        let speechBubble = new Window_Bubble(target, text);
+        const speechBubble = new Window_Bubble(target, text);
         speechBubble.addTo(scene);
 
         setTimeout(() => {
@@ -217,21 +216,14 @@
         static activeBubbles = {};
 
         initialize(targetCharacter, text) {
-            super.initialize(new Rectangle(0, 0, 0, 0));
+            super.initialize(this.getRectForText(text));
 
             this.targetCharacter = targetCharacter;
             if (!Window_Bubble.activeBubbles[this.targetId])
                 Window_Bubble.activeBubbles[this.targetId] = [];
 
-            this.text = text;
-            let textDimensions = this.textSizeEx(this.text);
-            this.textLength = textDimensions.length;
-            let width = textDimensions.width + $gameSystem.windowPadding() * 2;
-            let height = textDimensions.height + $gameSystem.windowPadding() * 2;
-
-            this.move(0, 0, width, height);
-            this.createContents();
-            this.drawTextEx(this.text, 0, 0);
+            this.textLength = 0;
+            this.drawTextEx(text, 0, 0);
         }
 
         get characterSprite() {
@@ -240,7 +232,7 @@
         }
 
         get targetPosition() {
-            let sprite = this.characterSprite;
+            const sprite = this.characterSprite;
             return {
                 x: sprite.x - this.width / 2,
                 y: sprite.y - sprite.height - this.height - 10
@@ -261,35 +253,30 @@
             return this.activeBubbles.slice(-1)[0];
         }
 
+        getRectForText(text) {
+            const textDimensions = new Window_Base(new Rectangle(0, 0, 0, 0)).textSizeEx(text);
+            let width = textDimensions.width + $gameSystem.windowPadding() * 2;
+            let height = textDimensions.height + $gameSystem.windowPadding() * 2;
+            width += width % 2; height += height % 2; // Dimensions must be even, otherwise a black bar will appear.
+            return new Rectangle(0, 0, width, height);
+        }
+
         flushTextState(textState) {
-            textState.length += textState.buffer.length - (textState.rtl ? 1 : 0);
+            this.textLength += textState.buffer.length - (textState.rtl ? 1 : 0);
             super.flushTextState(textState);
         }
 
-        textSizeEx(text) {
-            this.resetFontSettings();
-            const textState = this.createTextState(text, 0, 0, 0);
-            textState.drawing = false;
-            textState.length = 0;
-            this.processAllText(textState);
-            return {
-                width: textState.outputWidth,
-                height: textState.outputHeight,
-                length: textState.length
-            };
-        }
-
         update() {
-            let windowPosition = this.targetPosition;
+            const windowPosition = this.targetPosition;
             this.x = windowPosition.x;
             this.y = windowPosition.y;
             super.update();
         }
 
         isPlayerWithinDistance() {
-            let distance = parameters.Distance;
-            let xDist = $gamePlayer._realX - this.targetCharacter.x;
-            let yDist = $gamePlayer._realY - this.targetCharacter.y;
+            const distance = parameters.Distance;
+            const xDist = $gamePlayer._realX - this.targetCharacter.x;
+            const yDist = $gamePlayer._realY - this.targetCharacter.y;
             // Pythagoras: a^2 + b^2 = c^2
             return xDist * xDist + yDist * yDist <= distance * distance;
         }
@@ -304,12 +291,14 @@
         }
 
         addTo(parent) {
+            if (this.parent) // Don't add if already have a parent.
+                return;
+
             this.update(); // Update window position before adding it to parent.
             parent.addChild(this);
             // Used to ensure only 1 speech bubble is visible per target.
             this.activeBubbles.remove(this);
-            if (this.activeBubble)
-                this.activeBubble.hide();
+            this.activeBubble?.hide();
             this.activeBubbles.push(this);
             this.show();
         }
@@ -320,29 +309,28 @@
 
             this.parent.removeChild(this);
             this.activeBubbles.remove(this);
-            if (this.activeBubble)
-                this.activeBubble.show();
+            this.activeBubble?.show();
         }
     }
 
     //=========================================================================
     // Scene_Map
     //=========================================================================
-    let speechBubbles = [];
+    const speechBubbles = [];
 
-    let Scene_Map_createDisplayObjects = Scene_Map.prototype.createDisplayObjects;
+    const Scene_Map_createDisplayObjects = Scene_Map.prototype.createDisplayObjects;
     Scene_Map.prototype.createDisplayObjects = function () {
         Scene_Map_createDisplayObjects.call(this);
 
-        let eventsWithBubbles = $gameMap.events()
+        const eventsWithBubbles = $gameMap.events()
             .filter(event => NOTETAG_BUBBLE in event.event().meta);
         for (const event of eventsWithBubbles) {
-            let text = event.event().meta[NOTETAG_BUBBLE].replace(/\\n/g, "\n");
+            const text = event.event().meta[NOTETAG_BUBBLE].replace(/\\n/g, "\n");
             speechBubbles.push(new Window_Bubble(event, text));
         }
     };
 
-    let Scene_Map_terminate = Scene_Map.prototype.terminate;
+    const Scene_Map_terminate = Scene_Map.prototype.terminate;
     Scene_Map.prototype.terminate = function () {
         Scene_Map_terminate.call(this);
 
@@ -350,21 +338,20 @@
             bubble.remove();
 
         // Clear speechBubbles
-        speechBubbles = [];
+        speechBubbles.length = 0;
     }
 
     //=========================================================================
     // Game_Player
     //=========================================================================
-    let Game_Player_updateAnimation = Game_Player.prototype.updateAnimation;
+    const Game_Player_updateAnimation = Game_Player.prototype.updateAnimation;
     Game_Player.prototype.updateAnimation = function () {
         Game_Player_updateAnimation.call(this);
 
-        let scene = SceneManager._scene;
+        const scene = SceneManager._scene;
         for (const speechBubble of speechBubbles) {
             if (speechBubble.isPlayerWithinDistance() && !speechBubble.isOtherBubbleActive()) {
-                if (!speechBubble.parent)
-                    speechBubble.addTo(scene);
+                speechBubble.addTo(scene);
             } else {
                 speechBubble.remove();
             }
@@ -374,7 +361,7 @@
     //=========================================================================
     // Game_Interpreter
     //=========================================================================
-    let Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
+    const Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
     Game_Interpreter.prototype.updateWaitMode = function () {
         return this._waitMode === WAITMODE_BUBBLE ?
             blockingSpeechBubble.isActive() :
