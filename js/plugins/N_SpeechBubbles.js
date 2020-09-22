@@ -64,8 +64,9 @@
  * @arg targetSelectorId
  * @parent target
  * @text Target ID
- * @desc If you chose "Event (by variable)" or "Follower (by variable)", select the ID by which to select the target.
- * @type variable
+ * @desc The ID of the event, follower, or variable to select.
+ *       Note: The first follower has an ID of 0.
+ * @type number
  * @default 1
  * 
  * @arg durationMs
@@ -92,22 +93,28 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.1.0
+ * @help Version 1.1.1
  * 
  * Speech bubbles support the following control characters:
- *      \v[n]   Replaced by the value of the nth variable.
- *      \n[n]   Replaced by the name of the nth actor.
- *      \p[n]   Replaced by the name of the nth party member.
- *      \g      Replaced by the currency unit.
- *      \c[n]   Draw the subsequent text in the nth color.
- *      \i[n]   Draw the nth icon.
- *      \{      Increase the text size by one step.
- *      \}      Decrease the text size by one step.
- *      \\      Replaced with the backslash character.
+ *      \v[n]           Replaced by the value of the nth variable.
+ *      \n[n]           Replaced by the name of the nth actor.
+ *      \p[n]           Replaced by the name of the nth party member.
+ *      \g              Replaced by the currency unit.
+ *      \c[n]           Draw the subsequent text in the nth color.
+ *      \i[n]           Draw the nth icon.
+ *      \{              Increase the text size by one step.
+ *      \}              Decrease the text size by one step.
+ *      \\              Replaced with the backslash character.
  * 
  * ============================================================================
  * Plugin Commands
  * ============================================================================
+ * Show bubble
+ *      Shows a bubble above the selected target. Aside from "Player" and
+ *      "This event", a target ID is needed.
+ * 
+ *      IMPORTANT: The ID of the first event or variable is 1.
+ *                 The ID of the first follower is 0.
  * 
  * Execute script
  *      For experts only.
@@ -214,16 +221,16 @@
         return $gameMap._events[id];
     }
 
-    function getEventByVar(v) {
-        return getEventById($gameVariables.value(v));
+    function getEventByVar(varId) {
+        return getEventById($gameVariables.value(varId));
     }
 
     function getFollowerById(id) {
         return $gamePlayer.followers().follower(id);
     }
 
-    function getFollowerByVar(v) {
-        return getFollowerById($gameVariables.value(v));
+    function getFollowerByVar(varId) {
+        return getFollowerById($gameVariables.value(varId));
     }
 
     //=========================================================================
