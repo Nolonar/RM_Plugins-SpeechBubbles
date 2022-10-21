@@ -93,7 +93,7 @@
  * @type multiline_string
  * 
  * 
- * @help Version 1.1.1
+ * @help Version 1.1.2
  * 
  * Speech bubbles support the following control characters:
  *      \v[n]           Replaced by the value of the nth variable.
@@ -348,12 +348,13 @@
     Scene_Map.prototype.createDisplayObjects = function () {
         Scene_Map_createDisplayObjects.call(this);
 
-        const eventsWithBubbles = $gameMap.events()
-            .filter(event => NOTETAG_BUBBLE in event.event().meta);
-        for (const event of eventsWithBubbles) {
-            const text = event.event().meta[NOTETAG_BUBBLE].replace(/\\n/g, "\n");
-            speechBubbles.push(new Window_Bubble(event, text));
-        }
+        $gameMap.events().filter(e => {
+            const event = e.event();
+            return !!event && NOTETAG_BUBBLE in event.meta;
+        }).forEach(e => {
+            const text = e.event().meta[NOTETAG_BUBBLE].replace(/\\n/g, "\n");
+            speechBubbles.push(new Window_Bubble(e, text));
+        });
     };
 
     const Scene_Map_terminate = Scene_Map.prototype.terminate;
